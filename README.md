@@ -72,7 +72,8 @@ Copy-Item backend/.env.example backend/.env
 
 ```env
 GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-4-hydrogen
+GEMINI_TIMEOUT_SECONDS=15
 DATABASE_URL=sqlite:///./reqsense.db
 DEMO_MODE=false
 CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
@@ -123,11 +124,11 @@ npm run dev
 | Tarih Aralığı | Aşama | Durum |
 | :--- | :--- | :--- |
 | **24–25 Kasım** | Planlama, Kurulum, Klasör Yapısı ve Doküman Bölüm 1–2 | Tamamlandı |
-| **26–28 Kasım** | Veri Modeli (SQLite/SQLAlchemy) ve NLP Çekirdeği (Gemini Structured Output) | Planlandı |
-| **29 Kasım – 1 Aralık** | Backend REST API Uç Noktaları, Dışa Aktarma ve Hata Yönetimi | Planlandı |
-| **2–4 Aralık** | Frontend MVP Arayüzü (Form, Sekmeli Tablo, Düzenleme, Dışa Aktarma) | Planlandı |
-| **5–6 Aralık** | Frontend–Backend Entegrasyonu ve Geçmiş Oturum Yönetimi | Planlandı |
-| **7–8 Aralık** | Otomatik Testler (`pytest`), Hata Düzeltme ve `dev -> main` Birleştirmesi | Planlandı |
+| **26–28 Kasım** | Veri Modeli (SQLite/SQLAlchemy) ve NLP Çekirdeği (Gemini Structured Output) | Tamamlandı |
+| **29 Kasım – 1 Aralık** | Backend REST API Uç Noktaları, Dışa Aktarma ve Hata Yönetimi | Tamamlandı |
+| **2–4 Aralık** | Frontend MVP Arayüzü (Form, Sekmeli Tablo, Düzenleme, Dışa Aktarma) | Tamamlandı |
+| **5–6 Aralık** | Frontend–Backend Entegrasyonu ve Geçmiş Oturum Yönetimi | Tamamlandı |
+| **7–8 Aralık** | Otomatik Testler (`pytest`), Hata Düzeltme ve `dev -> main` Birleştirmesi | Tamamlandı |
 | **9–10 Aralık** | UML Diyagramları ve Tasarım/Geliştirme Dokümanı (Bölüm 3–4) | Planlandı |
 | **11–12 Aralık** | Test Raporu, Sonuç ve Kaynakça (Bölüm 5–7) + PDF Çıktısı | Planlandı |
 | **13–14 Aralık** | Sunum Hazırlığı, Canlı Demo Provası ve Teslim | Planlandı |

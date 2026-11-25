@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import httpx
 import pytest
+from google.genai import _interactions_errors as interactions_errors
 from google.genai import errors as genai_errors
 from pydantic import ValidationError
 
@@ -231,13 +232,17 @@ def test_nlp_service_handles_timeout_and_api_errors() -> None:
     """Zaman aşımı ve Gemini API hatalarının LLMProviderError (503) olarak sarmalandığını doğrular."""
     timeout_client = _FakeGeminiClient(exc=httpx.ReadTimeout("timed out"))
     timeout_service = NLPService(
-        settings_obj=Settings(demo_mode=False, gemini_api_key="valid-key"),
+        settings_obj=Settings(
+            demo_mode=False,
+            gemini_api_key="valid-key",
+            gemini_fallback_models="",
+        ),
         client=timeout_client,
     )
     with pytest.raises(LLMProviderError) as timeout_exc:
         timeout_service.analyze_text("Sistem kullanıcıların raporlarını güvenli biçimde dışa aktarsın.")
     assert timeout_exc.value.status_code == 503
-    assert "15 saniye" in timeout_exc.value.detail
+    assert "30 saniye" in timeout_exc.value.detail
 
     api_error = genai_errors.APIError(
         503,
@@ -245,12 +250,83 @@ def test_nlp_service_handles_timeout_and_api_errors() -> None:
     )
     api_client = _FakeGeminiClient(exc=api_error)
     api_service = NLPService(
-        settings_obj=Settings(demo_mode=False, gemini_api_key="valid-key"),
+        settings_obj=Settings(
+            demo_mode=False,
+            gemini_api_key="valid-key",
+            gemini_fallback_models="",
+        ),
         client=api_client,
     )
     with pytest.raises(LLMProviderError) as api_exc:
         api_service.analyze_text("Sistem kullanıcıların raporlarını güvenli biçimde dışa aktarsın.")
     assert api_exc.value.status_code == 503
+
+
+def test_nlp_service_falls_back_on_503_and_rejects_auth_errors() -> None:
+    """Birincil model 503 InternalServerError verdiğinde yedek modele geçildiğini, 401'de geçilmediğini doğrular."""
+    raw_json = json.dumps(_valid_payload_dict(), ensure_ascii=False)
+    called_models: list[str] = []
+
+    class _FallbackInteractions:
+        def create(self, **kwargs: object) -> object:
+            model_name = str(kwargs["model"])
+            called_models.append(model_name)
+            if model_name == "gemini-4-hydrogen":
+                response = httpx.Response(
+                    503,
+                    request=httpx.Request("POST", "https://example.invalid/v1/interactions"),
+                )
+                raise interactions_errors.InternalServerError(
+                    "gemini-4-hydrogen overloaded",
+                    response=response,
+                    body={"error": {"code": "service_unavailable"}},
+                )
+            return SimpleNamespace(output_text=raw_json)
+
+    fallback_client = SimpleNamespace(interactions=_FallbackInteractions())
+    service = NLPService(
+        settings_obj=Settings(
+            demo_mode=False,
+            gemini_api_key="valid-key",
+            gemini_model="gemini-4-hydrogen",
+            gemini_fallback_models="gemini-3.5-flash-lite",
+        ),
+        client=fallback_client,
+    )
+    output, mode = service.analyze_text("Öğrenciler staj başvurularını çevrimiçi yapabilmelidir.")
+    assert mode == "llm"
+    assert called_models == ["gemini-4-hydrogen", "gemini-3.5-flash-lite"]
+    assert output.project_title == "Staj Takip Portalı"
+
+    # 401 AuthenticationError durumunda yedek modele geçmeden LLMConfigurationError fırlatılmalı
+    auth_calls: list[str] = []
+
+    class _AuthFailInteractions:
+        def create(self, **kwargs: object) -> object:
+            auth_calls.append(str(kwargs["model"]))
+            response = httpx.Response(
+                401,
+                request=httpx.Request("POST", "https://example.invalid/v1/interactions"),
+            )
+            raise interactions_errors.AuthenticationError(
+                "invalid api key",
+                response=response,
+                body={"error": {"code": "unauthenticated"}},
+            )
+
+    auth_service = NLPService(
+        settings_obj=Settings(
+            demo_mode=False,
+            gemini_api_key="bad-key",
+            gemini_model="gemini-3.5-flash-lite",
+            gemini_fallback_models="gemini-3.1-flash-lite",
+        ),
+        client=SimpleNamespace(interactions=_AuthFailInteractions()),
+    )
+    with pytest.raises(LLMConfigurationError) as auth_exc:
+        auth_service.analyze_text("Öğrenciler staj başvurularını çevrimiçi yapabilmelidir.")
+    assert auth_exc.value.status_code == 503
+    assert auth_calls == ["gemini-3.5-flash-lite"]
 
 
 @pytest.mark.parametrize(

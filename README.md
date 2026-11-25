@@ -72,8 +72,9 @@ Copy-Item backend/.env.example backend/.env
 
 ```env
 GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-4-hydrogen
-GEMINI_TIMEOUT_SECONDS=15
+GEMINI_MODEL=gemini-3.1-flash-lite
+GEMINI_FALLBACK_MODELS=gemini-3.5-flash-lite
+GEMINI_TIMEOUT_SECONDS=30
 DATABASE_URL=sqlite:///./reqsense.db
 DEMO_MODE=false
 CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173

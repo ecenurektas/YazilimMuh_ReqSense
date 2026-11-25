@@ -38,3 +38,6 @@ yarn-error.log*
 .idea/
 .DS_Store
 Thumbs.db
+
+# Stray nested clone directory
+YazilimMuh_ReqSense/
